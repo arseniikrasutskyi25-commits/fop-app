@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ФОП-помічник</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="core.js"></script>
+<style>
+:root{
+  --bg: var(--tg-theme-secondary-bg-color, #f2f2f7);
+  --card: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #ffffff));
+  --text: var(--tg-theme-text-color, #111114);
+  --hint: var(--tg-theme-hint-color, #8e8e93);
+  --sep: rgba(127,127,140,.18);
+  --accent: #6c5ce7;
+  --accent2: #4f8bff;
+  --ok: #22b07d;
+  --warn: #f5a524;
+  --bad: #ef4b5b;
+  --chip: rgba(108,92,231,.12);
+  --radius: 18px;
+  --nav-h: 64px;
+  --safe-b: var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-tg]){ --bg:#0f0f12; --card:#1c1c21; --text:#f2f2f5; --hint:#8d8d96; }
+}
+[data-scheme="dark"]{ --chip: rgba(140,125,255,.18); --sep: rgba(255,255,255,.08); }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+input,select{font:inherit;color:var(--text)}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.hint{color:var(--hint)}
+.small{font-size:13px}
+.view{display:none;padding:16px 16px calc(var(--nav-h) + var(--safe-b) + 24px);max-width:640px;margin:0 auto;
+  animation:fade .18s ease}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+h1{font-size:26px;line-height:1.15;margin:4px 0 2px;font-weight:700;letter-spacing:-.02em}
+h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);margin:22px 4px 8px}
+.sub{color:var(--hint);margin-bottom:14px}
+.card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:12px}
+.between{justify-content:space-between}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid2 .card{margin:0}
+.stat-label{font-size:13px;color:var(--hint);margin-bottom:4px}
+.stat-val{font-size:20px;font-weight:700}
+
+/* hero */
+.hero{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-radius:22px;padding:18px;
+  position:relative;overflow:hidden;margin-bottom:12px;box-shadow:0 10px 30px -12px rgba(79,139,255,.6)}
+.hero:after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;
+  background:rgba(255,255,255,.12)}
+.hero .label{opacity:.85;font-size:13px}
+.hero .big{font-size:34px;font-weight:800;margin:4px 0 2px;letter-spacing:-.02em}
+.hero .meta{opacity:.9;font-size:14px}
+.hero .btn-ghost{margin-top:14px;background:rgba(255,255,255,.2);color:#fff;border-radius:12px;padding:9px 14px;
+  font-weight:600;font-size:14px;position:relative;z-index:1}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600;
+  background:var(--chip);color:var(--accent)}
+.pill.ok{background:rgba(34,176,125,.14);color:var(--ok)}
+.pill.warn{background:rgba(245,165,36,.16);color:#c98100}
+.pill.bad{background:rgba(239,75,91,.14);color:var(--bad)}
+[data-scheme="dark"] .pill.warn{color:var(--warn)}
+.hero .pill{background:rgba(255,255,255,.22);color:#fff}
+
+/* progress */
+.bar{height:10px;border-radius:99px;background:var(--sep);overflow:hidden;margin:10px 0 8px}
+.bar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  transition:width .5s ease}
+.bar.warn>i{background:linear-gradient(90deg,var(--warn),#ff7a45)}
+.bar.bad>i{background:var(--bad)}
+
+/* lists */
+.list{background:var(--card);border-radius:var(--radius);overflow:hidden;margin-bottom:12px}
+.item{display:flex;align-items:center;gap:12px;padding:12px 16px;position:relative;width:100%;text-align:left}
+.item+.item:before{content:"";position:absolute;top:0;left:64px;right:0;height:1px;background:var(--sep)}
+.item:active{background:var(--sep)}
+.ico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;font-size:18px;
+  background:var(--chip);color:var(--accent)}
+.grow{flex:1;min-width:0}
+.title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.amount{font-weight:700;white-space:nowrap}
+.amount.plus{color:var(--ok)}
+.month-h{display:flex;justify-content:space-between;margin:18px 4px 8px;font-size:13px;font-weight:600;color:var(--hint);
+  text-transform:uppercase;letter-spacing:.03em}
+.empty{text-align:center;padding:36px 16px;color:var(--hint)}
+.empty .e{font-size:42px;margin-bottom:8px}
+
+/* date badge */
+.dbadge{width:46px;flex:none;text-align:center;border-radius:12px;background:var(--chip);color:var(--accent);padding:5px 0}
+.dbadge b{display:block;font-size:18px;line-height:1.1}
+.dbadge span{font-size:11px;font-weight:600;text-transform:uppercase}
+.dbadge.done{background:rgba(34,176,125,.14);color:var(--ok)}
+.dbadge.soon{background:rgba(239,75,91,.14);color:var(--bad)}
+.check{width:26px;height:26px;border-radius:50%;border:2px solid var(--sep);flex:none;display:grid;place-items:center;
+  transition:.15s}
+.check.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.check svg{width:14px;height:14px;opacity:0}
+.check.on svg{opacity:1}
+.strike .title{text-decoration:line-through;opacity:.6}
+
+/* segmented */
+.seg{display:flex;background:var(--card);border-radius:12px;padding:3px;margin-bottom:14px}
+.seg button{flex:1;padding:8px 6px;border-radius:9px;font-weight:600;font-size:14px;color:var(--hint)}
+.seg button.on{background:var(--accent);color:#fff}
+.yearsw{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:12px;font-weight:700;font-size:17px}
+.yearsw button{width:34px;height:34px;border-radius:50%;background:var(--card);font-size:18px}
+
+/* quarter card */
+.qhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.qhead b{font-size:17px}
+.kv{display:flex;justify-content:space-between;padding:5px 0;font-size:15px}
+.kv.total{border-top:1px solid var(--sep);margin-top:6px;padding-top:10px;font-weight:700}
+.qpay{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.qpay button{flex:1;min-width:140px;border-radius:12px;padding:9px 10px;font-size:13px;font-weight:600;
+  background:var(--chip);color:var(--accent);text-align:left}
+.qpay button.paid{background:rgba(34,176,125,.14);color:var(--ok)}
+
+/* chart */
+.chart{display:flex;align-items:flex-end;gap:6px;height:130px;padding-top:18px}
+.chart .c{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px}
+.chart .c i{display:block;width:100%;max-width:28px;border-radius:7px 7px 3px 3px;min-height:3px;
+  background:linear-gradient(180deg,var(--accent2),var(--accent));transition:height .5s ease}
+.chart .c.zero i{background:var(--sep)}
+.chart .c.cur i{box-shadow:0 0 0 2px var(--card),0 0 0 4px rgba(108,92,231,.35)}
+.chart .c span{font-size:10px;color:var(--hint);font-weight:600}
+.chart .c em{font-style:normal;font-size:9.5px;color:var(--hint);white-space:nowrap}
+.hbar{height:8px;border-radius:99px;background:var(--sep);overflow:hidden;margin-top:6px}
+.hbar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+
+/* forms */
+.field{background:var(--card);border-radius:14px;padding:10px 14px;margin-bottom:10px}
+.field label{display:block;font-size:12px;color:var(--hint);font-weight:600;margin-bottom:2px}
+.field input,.field select{width:100%;border:0;outline:0;background:transparent;font-size:17px;padding:2px 0}
+.field.big input{font-size:32px;font-weight:800}
+.btn{display:block;width:100%;border-radius:14px;padding:14px;font-weight:700;font-size:16px;text-align:center;
+  background:var(--tg-theme-button-color,var(--accent));color:var(--tg-theme-button-text-color,#fff)}
+.btn.sec{background:var(--card);color:var(--accent)}
+.btn.danger{background:transparent;color:var(--bad)}
+.btn+.btn{margin-top:8px}
+.toggle{width:50px;height:30px;border-radius:99px;background:var(--sep);position:relative;transition:.2s;flex:none}
+.toggle:after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.25);transition:.2s}
+.toggle.on{background:var(--ok)}
+.toggle.on:after{left:23px}
+.gpick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 14px}
+.gpick button{background:var(--card);border-radius:16px;padding:16px 8px;border:2px solid transparent;text-align:center}
+.gpick button b{display:block;font-size:24px}
+.gpick button.on{border-color:var(--accent);background:var(--chip)}
+.best{outline:2px solid var(--ok)}
+
+/* nav */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--card);
+  border-top:1px solid var(--sep);padding-bottom:var(--safe-b)}
+nav .in{display:flex;max-width:640px;margin:0 auto;height:var(--nav-h)}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  color:var(--hint);font-size:11px;font-weight:600}
+nav button svg{width:24px;height:24px}
+nav button.on{color:var(--accent)}
+.fab{position:fixed;right:18px;bottom:calc(var(--nav-h) + var(--safe-b) + 16px);z-index:21;width:58px;height:58px;
+  border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:30px;
+  box-shadow:0 10px 24px -8px rgba(79,139,255,.8);display:grid;place-items:center;transition:transform .15s}
+.fab:active{transform:scale(.92)}
+.fab.hide{display:none}
+
+/* sheet */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40;opacity:0;pointer-events:none;transition:.2s}
+.overlay.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--bg);border-radius:22px 22px 0 0;
+  padding:10px 16px calc(16px + var(--safe-b));transform:translateY(105%);transition:transform .25s cubic-bezier(.2,.8,.2,1);
+  max-height:92vh;overflow:auto;max-width:640px;margin:0 auto;visibility:hidden;
+  transition:transform .25s cubic-bezier(.2,.8,.2,1),visibility 0s .25s}
+.sheet.on{transform:none;visibility:visible;transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.grab{width:38px;height:5px;border-radius:9px;background:var(--sep);margin:0 auto 12px}
+.reserve{margin:-2px 4px 12px;font-size:13px}
+.toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + var(--safe-b) + 90px);transform:translateX(-50%) translateY(20px);
+  background:rgba(30,30,35,.92);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;
+  opacity:0;transition:.25s;z-index:60;pointer-events:none;white-space:nowrap}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.search{width:100%;border:0;outline:0;background:var(--card);border-radius:12px;padding:10px 14px;font-size:16px;margin-bottom:10px}
+.chips{display:flex;gap:8px;overflow-x:auto;margin-bottom:6px;scrollbar-width:none}
+.chips button{padding:6px 12px;border-radius:99px;background:var(--card);font-weight:600;font-size:13px;white-space:nowrap}
+.chips button.on{background:var(--accent);color:#fff}
+.note{font-size:12.5px;color:var(--hint);padding:4px 6px 0;line-height:1.45}
+#onboard{display:none;padding:28px 18px;max-width:520px;margin:0 auto}
+#onboard.on{display:block}
+.logo{width:72px;height:72px;border-radius:22px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;font-size:38px;font-weight:800;display:grid;place-items:center;margin:8px auto 16px;
+  box-shadow:0 14px 30px -12px rgba(79,139,255,.8)}
+</style>
+</head>
+<body>
+
+<!-- Онбординг -->
+<section id="onboard">
+  <div class="logo">Ф</div>
+  <h1 style="text-align:center">ФОП-помічник</h1>
+  <p class="sub" style="text-align:center">Податки, ліміт доходу й строки — в одному місці</p>
+  <h2>На якій ти групі?</h2>
+  <div class="gpick" id="ob-groups">
+    <button data-g="1"><b>1</b><span class="small hint">роздрібна торгівля, побутові послуги</span></button>
+    <button data-g="2"><b>2</b><span class="small hint">послуги й торгівля для населення</span></button>
+    <button data-g="3"><b>3</b><span class="small hint">5% від доходу, будь-які клієнти</span></button>
+  </div>
+  <div id="ob-extra"></div>
+  <button class="btn" id="ob-go" disabled style="opacity:.5">Почати</button>
+  <p class="note" style="text-align:center;margin-top:14px">Застосунок допомагає з обліком, але не є податковою консультацією.</p>
+</section>
+
+<main id="main">
+  <!-- Головна -->
+  <section class="view" id="v-home"></section>
+  <!-- Доходи -->
+  <section class="view" id="v-inc"></section>
+  <!-- Податки -->
+  <section class="view" id="v-tax"></section>
+  <!-- Строки -->
+  <section class="view" id="v-dates"></section>
+  <!-- Ще -->
+  <section class="view" id="v-more"></section>
+</main>
+
+<button class="fab" id="fab" aria-label="Додати дохід">+</button>
+
+<nav id="nav"><div class="in">
+  <button data-tab="home" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/></svg>Головна</button>
+  <button data-tab="inc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16 15h2"/></svg>Доходи</button>
+  <button data-tab="tax"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Податки</button>
+  <button data-tab="dates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Строки</button>
+  <button data-tab="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V11M10 19V5M16 19v-6M22 19H2"/></svg>Аналітика</button>
+</div></nav>
+
+<div class="overlay" id="overlay"></div>
+<div class="sheet" id="sheet"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const C = window.Core;
+const tg = window.Telegram && window.Telegram.WebApp;
+const IN_TG = !!(tg && tg.initData);
+
+/* ------------------------------------------------------------ утиліти */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const M_SHORT = ['січ','лют','бер','кві','тра','чер','лип','сер','вер','жов','лис','гру'];
+const M_GEN = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+const M_NOM = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+const Q_ROMAN = ['I','II','III','IV'];
+const today = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); };
+const plural = (n, a, b, c) => { const m10 = n % 10, m100 = n % 100;
+  return m10 === 1 && m100 !== 11 ? a : (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20) ? b : c); };
+const inDays = (n) => n === 0 ? 'сьогодні' : n === 1 ? 'завтра' : n < 0 ? `${-n} ${plural(-n,'день','дні','днів')} тому`
+  : `через ${n} ${plural(n,'день','дні','днів')}`;
+const fmtDate = (d) => `${d.getDate()} ${M_GEN[d.getMonth()]}`;
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const haptic = (t = 'light') => { try { t === 'success' || t === 'error' || t === 'warning'
+  ? tg.HapticFeedback.notificationOccurred(t) : t === 'select' ? tg.HapticFeedback.selectionChanged()
+  : tg.HapticFeedback.impactOccurred(t); } catch (e) {} };
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 1800); }
+function confirmBox(msg) {
+  return new Promise((res) => { try { if (IN_TG && tg.isVersionAtLeast('6.2')) return tg.showConfirm(msg, res); } catch (e) {}
+    res(window.confirm(msg)); });
+}
+
+/* ------------------------------------------------------------ сховище
+   Telegram CloudStorage: значення до 4096 символів, тому стан ріжемо на шматки s0..sN. */
+const Store = {
+  cs: (() => { try { return IN_TG && tg.isVersionAtLeast('6.9') ? tg.CloudStorage : null; } catch (e) { return null; } })(),
+  CHUNK: 4000,
+  lsGet() { try { return localStorage.getItem('fop_state'); } catch (e) { return null; } },
+  lsSet(v) { try { localStorage.setItem('fop_state', v); } catch (e) {} },
+  csGet(keys) { return new Promise((res) => { try { this.cs.getItems(keys, (err, v) => res(err ? null : v)); } catch (e) { res(null); } }); },
+  csSet(k, v) { return new Promise((res) => { try { this.cs.setItem(k, v, (err) => res(!err)); } catch (e) { res(false); } }); },
+  async load() {
+    if (this.cs) {
+      const meta = await this.csGet(['n']);
+      const n = meta && +meta.n;
+      if (n > 0) {
+        const keys = Array.from({ length: n }, (_, i) => 's' + i);
+        this.n = n;
+        const vals = await this.csGet(keys);
+        if (vals) { try { return JSON.parse(keys.map((k) => vals[k] || '').join('')); } catch (e) {} }
+      }
+    }
+    const raw = this.lsGet();
+    try { return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  },
+  save() {
+    clearTimeout(this.t);
+    this.t = setTimeout(async () => {
+      const s = JSON.stringify(S);
+      this.lsSet(s);
+      if (!this.cs) return;
+      const parts = s.match(new RegExp(`[\\s\\S]{1,${this.CHUNK}}`, 'g')) || [''];
+      for (let i = 0; i < parts.length; i++) await this.csSet('s' + i, parts[i]);
+      const prev = this.n || 0;
+      await this.csSet('n', String(parts.length));
+      if (prev > parts.length) { try { this.cs.removeItems(Array.from({ length: prev - parts.length }, (_, i) => 's' + (parts.length + i))); } catch (e) {} }
+      this.n = parts.length;
+    }, 350);
+  },
+};
+
+/* ------------------------------------------------------------ стан */
+let S = { v: 1, cfg: { group: null, vat: false, epMonth: null }, incomes: [], done: {}, tomb: [], bot: '' };
+const UI = { tab: 'home', incYear: null, incQuery: '', taxYear: null, datesTab: 'next', moreTab: 'stats', statYear: null,
+             calcMonthly: 50000, calcSum: '' };
+
+// Дані, які бот передає в посиланні: #g=3&v=0&ep=&bu=bot_name&b=id,YYYYMMDD,amount,note;...
+function importFromHash() {
+  const h = location.hash.replace(/^#/, '');
+  if (!h) return false;
+  const p = new URLSearchParams(h);
+  let changed = false;
+  if (p.get('g')) {
+    const g = +p.get('g');
+    if ([1, 2, 3].includes(g)) {
+      S.cfg.group = g; S.cfg.vat = p.get('v') === '1';
+      S.cfg.epMonth = p.get('ep') ? +p.get('ep') : (g === 3 ? null : S.cfg.epMonth);
+      changed = true;
+    }
+  }
+  if (p.get('bu')) S.bot = p.get('bu');
+  const b = p.get('b');
+  if (p.has('b')) {
+    const tomb = new Set(S.tomb);
+    const present = new Set();
+    (b || '').split(';').filter(Boolean).forEach((row) => {
+      present.add('b' + row.split(',')[0]);
+    });
+    // записи з чату, яких бот більше не має (видалені через /undo), прибираємо
+    const bfrom = p.get('bfrom') || '99999999';
+    const before = S.incomes.length;
+    S.incomes = S.incomes.filter((i) => !(i.src === 'bot' && !present.has(i.id) && i.day.replace(/-/g, '') >= bfrom));
+    if (S.incomes.length !== before) changed = true;
+    (b || '').split(';').filter(Boolean).forEach((row) => {
+      const [id, ymd, amount, ...note] = row.split(',');
+      if (!id || !/^\d{8}$/.test(ymd) || !(+amount > 0)) return;
+      const key = 'b' + id;
+      if (tomb.has(key)) return;
+      const day = `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`;
+      const ex = S.incomes.find((i) => i.id === key);
+      if (ex) { ex.day = day; ex.amount = +amount; }
+      else { S.incomes.push({ id: key, day, amount: +amount, client: '', note: note.join(',') || '', src: 'bot' }); changed = true; }
+    });
+  }
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  return changed;
+}
+
+/* ------------------------------------------------------------ обчислення для UI */
+function nextPayments(limitDays = 120) {
+  const t = today();
+  const ds = C.deadlines(S.cfg.group, C.addDays(t, -45), C.addDays(t, limitDays))
+    .filter((d) => d.kind !== 'decl' && d.kind !== 'ydecl' && !S.done[d.key])
+    .filter((d) => C.daysBetween(t, d.due) >= 0);
+  return ds.map((d) => Object.assign(d, { amount: C.deadlineAmount(S.cfg, S.incomes, d), left: C.daysBetween(t, d.due) }));
+}
+function groupLabel() {
+  const g = S.cfg.group;
+  if (g === 3) return `3 група · ${S.cfg.vat ? '3% + ПДВ' : '5%'}`;
+  return `${g} група · ЄП ${C.money(S.cfg.epMonth ?? C.epMax(g, today().getFullYear()))}/міс`;
+}
+function years() {
+  const ys = new Set(S.incomes.map((i) => +i.day.slice(0, 4)));
+  ys.add(today().getFullYear());
+  return [...ys].sort((a, b) => b - a);
+}
+
+/* ------------------------------------------------------------ рендер: Головна */
+function renderHome() {
+  const t = today(), y = t.getFullYear(), q = C.quarterOf(t);
+  const name = (IN_TG && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || '';
+  const pays = nextPayments(120);
+  const nx = pays[0];
+  // якщо кілька платежів в один день — сумуємо
+  const sameDay = nx ? pays.filter((p) => C.iso(p.due) === C.iso(nx.due)) : [];
+  const nxSum = sameDay.reduce((s, p) => s + (p.amount || 0), 0);
+  const qt = C.quarterTax(S.cfg, S.incomes, y, q);
+  const ytd = C.sumIncome(S.incomes, new Date(y, 0, 1), new Date(y, 11, 31));
+  const lim = C.limit(S.cfg.group, y), share = ytd / lim;
+  const mon = C.monthly(S.incomes, y);
+  const last6 = []; for (let i = 5; i >= 0; i--) { const d = new Date(y, t.getMonth() - i, 1);
+    last6.push({ m: d.getMonth(), v: d.getFullYear() === y ? mon[d.getMonth()] : C.monthly(S.incomes, d.getFullYear())[d.getMonth()], cur: i === 0 }); }
+  const max6 = Math.max(...last6.map((x) => x.v), 1);
+  const recent = [...S.incomes].sort((a, b) => b.day.localeCompare(a.day) || 0).slice(0, 4);
+  const urg = nx && nx.left <= 3 ? 'bad' : nx && nx.left <= 7 ? 'warn' : '';
+
+  $('#v-home').innerHTML = `
+    <h1>${name ? `Привіт, ${esc(name)} 👋` : 'Огляд'}</h1>
+    <div class="sub">${esc(groupLabel())}</div>
+
+    <div class="hero">
+      ${nx ? `
+        <div class="label">Найближчий платіж</div>
+        <div class="big num">${C.money(nxSum)}</div>
+        <div class="meta">${sameDay.map((p) => esc(p.title.replace(/ за .*/, ''))).join(' + ')} · до ${fmtDate(nx.due)}</div>
+        <div style="margin-top:8px"><span class="pill">${inDays(nx.left)}</span></div>
+        <button class="btn-ghost" data-act="pay-done" data-keys="${sameDay.map((p) => p.key).join('|')}">✓ Сплачено</button>`
+      : `<div class="label">Найближчі платежі</div><div class="big">Усе сплачено 🎉</div>
+         <div class="meta">У найближчі 4 місяці платежів немає</div>`}
+    </div>
+
+    <div class="grid2">
+      <div class="card"><div class="stat-label">Дохід за ${Q_ROMAN[q - 1]} кв.</div><div class="stat-val num">${C.money(qt.income)}</div></div>
+      <div class="card"><div class="stat-label">Податки за ${Q_ROMAN[q - 1]} кв.</div><div class="stat-val num">${C.money(qt.total)}</div></div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="row between"><b>Річний ліміт доходу</b><span class="pill ${share >= .9 ? 'bad' : share >= .8 ? 'warn' : ''}">${(share * 100).toFixed(1).replace('.', ',')}%</span></div>
+      <div class="bar ${share >= .9 ? 'bad' : share >= .8 ? 'warn' : ''}"><i style="width:${Math.min(100, share * 100)}%"></i></div>
+      <div class="row between small"><span class="hint">Отримано ${C.money(ytd)}</span><span class="hint">з ${C.moneyShort(lim)}</span></div>
+    </div>
+
+    <div class="card">
+      <div class="row between"><b>Доходи за 6 місяців</b><button class="small" style="color:var(--accent);font-weight:600" data-go="more">Аналітика ›</button></div>
+      <div class="chart">${last6.map((x) => `<div class="c ${x.v ? '' : 'zero'} ${x.cur ? 'cur' : ''}">
+        <em>${x.v ? C.moneyShort(x.v) : ''}</em><i style="height:${Math.max(3, (x.v / max6) * 88)}%"></i><span>${M_SHORT[x.m]}</span></div>`).join('')}</div>
+    </div>
+
+    <div class="row between"><h2 style="margin-top:14px">Останні надходження</h2>
+      ${S.incomes.length ? `<button class="small" style="color:var(--accent);font-weight:600;margin-top:6px" data-go="inc">Усі ›</button>` : ''}</div>
+    ${recent.length ? `<div class="list">${recent.map(incomeRow).join('')}</div>`
+      : `<div class="card empty"><div class="e">💸</div>Додай перше надходження кнопкою <b>+</b><br><span class="small">або просто надішли суму боту в чат</span></div>`}
+  `;
+}
+
+function incomeRow(i) {
+  const d = C.parseISO(i.day);
+  const label = i.client || i.note || 'Надходження';
+  const sub = [i.client && i.note ? i.note : '', `${d.getDate()} ${M_GEN[d.getMonth()]}`, i.src === 'bot' ? 'з чату' : '']
+    .filter(Boolean).join(' · ');
+  return `<button class="item" data-edit="${esc(i.id)}">
+    <div class="ico">${esc((label.trim()[0] || '₴').toUpperCase())}</div>
+    <div class="grow"><div class="title">${esc(label)}</div><div class="small hint">${esc(sub)}</div></div>
+    <div class="amount plus num">+${C.money(i.amount)}</div></button>`;
+}
+
+/* ------------------------------------------------------------ рендер: Доходи */
+function renderIncomes() {
+  const ys = years();
+  if (!UI.incYear || !ys.includes(UI.incYear)) UI.incYear = ys[0];
+  const q = UI.incQuery.trim().toLowerCase();
+  const list = S.incomes.filter((i) => +i.day.slice(0, 4) === UI.incYear)
+    .filter((i) => !q || `${i.client} ${i.note} ${i.amount}`.toLowerCase().includes(q))
+    .sort((a, b) => b.day.localeCompare(a.day));
+  const total = list.reduce((s, i) => s + i.amount, 0);
+  const byMonth = {};
+  list.forEach((i) => (byMonth[i.day.slice(5, 7)] = byMonth[i.day.slice(5, 7)] || []).push(i));
+
+  $('#v-inc').innerHTML = `
+    <h1>Доходи</h1>
+    <div class="sub">${list.length} ${plural(list.length, 'запис', 'записи', 'записів')} · <b class="num" style="color:var(--text)">${C.money(total)}</b></div>
+    <input class="search" id="inc-q" placeholder="🔍  Пошук за клієнтом, коментарем, сумою" value="${esc(UI.incQuery)}">
+    <div class="chips">${ys.map((y) => `<button data-incyear="${y}" class="${y === UI.incYear ? 'on' : ''}">${y}</button>`).join('')}</div>
+    ${list.length ? Object.keys(byMonth).sort().reverse().map((m) => {
+      const arr = byMonth[m];
+      return `<div class="month-h"><span>${M_NOM[+m - 1]}</span><span class="num">${C.money(arr.reduce((s, i) => s + i.amount, 0))}</span></div>
+        <div class="list">${arr.map(incomeRow).join('')}</div>`;
+    }).join('') : `<div class="card empty"><div class="e">${q ? '🔎' : '🗂️'}</div>${q ? 'Нічого не знайдено' : 'Цього року ще немає надходжень'}</div>`}
+  `;
+  const inp = $('#inc-q');
+  inp.oninput = () => { UI.incQuery = inp.value; const pos = inp.selectionStart; renderIncomes();
+    const n = $('#inc-q'); n.focus(); n.setSelectionRange(pos, pos); };
+}
+
+/* ------------------------------------------------------------ рендер: Податки */
+function renderTaxes() {
+  const t = today();
+  if (!UI.taxYear) UI.taxYear = t.getFullYear();
+  const y = UI.taxYear, g = S.cfg.group;
+  const yt = C.yearTax(S.cfg, S.incomes, y);
+  const r = C.rates(y);
+  const eff = yt.total.income ? yt.total.total / yt.total.income : 0;
+  const ds = C.deadlines(g, new Date(y, 0, 1), new Date(y + 1, 2, 31));
+  const dueOf = (key) => { const d = ds.find((x) => x.key === key); return d ? d.due : null; };
+
+  $('#v-tax').innerHTML = `
+    <h1>Податки</h1>
+    <div class="sub">${esc(groupLabel())}</div>
+    <div class="yearsw"><button data-taxy="-1">‹</button><span>${y}</span><button data-taxy="1">›</button></div>
+    ${!r.exact ? `<div class="card small" style="background:rgba(245,165,36,.14)">⚠️ Ставок на ${y} рік ще немає — використано показники ${r.year} року.</div>` : ''}
+    <div class="hero">
+      <div class="label">Усього податків за ${y}</div>
+      <div class="big num">${C.money(yt.total.total)}</div>
+      <div class="meta">Дохід ${C.money(yt.total.income)} · навантаження ${(eff * 100).toFixed(1).replace('.', ',')}%</div>
+    </div>
+    ${yt.quarters.map((qt) => {
+      const [s, e] = C.quarterBounds(y, qt.q);
+      const isCur = y === t.getFullYear() && qt.q === C.quarterOf(t);
+      const isFuture = s > t;
+      const payKey = `pay-${y}-q${qt.q}`, esvKey = `esv-${y}-q${qt.q}`;
+      const payDue = dueOf(payKey), esvDue = dueOf(esvKey);
+      const payBtn = (key, due, label, amount) => due ? `<button data-toggle-done="${key}" class="${S.done[key] ? 'paid' : ''}">
+        ${S.done[key] ? '✓ ' : ''}${label} ${C.money(amount)}<br><span style="font-weight:500;opacity:.8">${S.done[key] ? 'сплачено' : 'до ' + fmtDate(due)}</span></button>` : '';
+      return `<div class="card" style="${isFuture ? 'opacity:.55' : ''}">
+        <div class="qhead"><b>${Q_ROMAN[qt.q - 1]} квартал ${isCur ? '<span class="pill" style="margin-left:6px">зараз</span>' : ''}</b>
+          <span class="small hint">${M_SHORT[s.getMonth()]} – ${M_SHORT[e.getMonth()]}</span></div>
+        <div class="kv"><span class="hint">Дохід</span><span class="num">${C.money(qt.income)}</span></div>
+        <div class="kv"><span class="hint">Єдиний податок${g === 3 ? (S.cfg.vat ? ' 3%' : ' 5%') : ''}</span><span class="num">${C.money(qt.ep)}</span></div>
+        <div class="kv"><span class="hint">Військовий збір${g === 3 ? ' 1%' : ''}</span><span class="num">${C.money(qt.vz)}</span></div>
+        <div class="kv"><span class="hint">ЄСВ</span><span class="num">${C.money(qt.esv)}</span></div>
+        <div class="kv total"><span>Разом</span><span class="num">${C.money(qt.total)}</span></div>
+        ${isFuture ? '' : `<div class="qpay">
+          ${g === 3 ? payBtn(payKey, payDue, 'ЄП+ВЗ', qt.ep + qt.vz) : ''}
+          ${payBtn(esvKey, esvDue, 'ЄСВ', qt.esv)}
+        </div>`}
+        ${g !== 3 && !isFuture ? `<div class="note">ЄП і ВЗ для ${g} групи сплачуються авансом щомісяця до 20 числа — відмічай їх у «Строках».</div>` : ''}
+      </div>`;
+    }).join('')}
+    <p class="note">ЄСВ — мінімальний внесок 22% від мінімальної зарплати (${C.money(C.esvMonth(y))}/міс). Строки з урахуванням перенесення з вихідних. Перевіряй суми в Електронному кабінеті ДПС.</p>
+  `;
+}
+
+/* ------------------------------------------------------------ рендер: Строки */
+function renderDates() {
+  const t = today();
+  const next = UI.datesTab === 'next';
+  const from = next ? t : C.addDays(t, -365), to = next ? C.addDays(t, 365) : C.addDays(t, -1);
+  let ds = C.deadlines(S.cfg.group, from, to);
+  if (!next) ds = ds.reverse();
+  const shown = next ? ds.slice(0, 24) : ds.slice(0, 40);
+  const recentMissed = C.deadlines(S.cfg.group, C.addDays(t, -30), C.addDays(t, -1))
+    .filter((d) => d.kind !== 'decl' && d.kind !== 'ydecl' && !S.done[d.key]);
+
+  $('#v-dates').innerHTML = `
+    <h1>Строки</h1>
+    <div class="sub">Нагадування приходять у чат бота за 5 днів і за день</div>
+    <div class="seg"><button data-dtab="next" class="${next ? 'on' : ''}">Майбутні</button><button data-dtab="past" class="${next ? '' : 'on'}">Минулі</button></div>
+    ${next && recentMissed.length ? `<div class="card small" style="background:rgba(239,75,91,.1)">
+      ⏰ Не відмічено як сплачені: ${recentMissed.map((d) => esc(d.title)).join(', ')}. Якщо вже сплатив — відміть у вкладці «Минулі».</div>` : ''}
+    ${shown.length ? `<div class="list">${shown.map((d) => {
+      const left = C.daysBetween(t, d.due), done = !!S.done[d.key];
+      const amt = C.deadlineAmount(S.cfg, S.incomes, d);
+      const isDecl = d.kind === 'decl' || d.kind === 'ydecl';
+      return `<div class="item ${done ? 'strike' : ''}">
+        <div class="dbadge ${done ? 'done' : next && left <= 5 ? 'soon' : ''}"><b>${d.due.getDate()}</b><span>${M_SHORT[d.due.getMonth()]}</span></div>
+        <div class="grow"><div class="title">${esc(d.title)}</div>
+          <div class="small hint">${amt != null ? C.money(amt) + ' · ' : isDecl ? 'подати звіт · ' : ''}${inDays(left)}</div></div>
+        <button class="check ${done ? 'on' : ''}" data-toggle-done="${d.key}" aria-label="Виконано">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17 19 7"/></svg></button>
+      </div>`;
+    }).join('')}</div>` : `<div class="card empty"><div class="e">📭</div>Немає строків</div>`}
+  `;
+}
+
+/* ------------------------------------------------------------ рендер: Аналітика / Калькулятор / Налаштування */
+function renderMore() {
+  const tabs = [['stats', 'Аналітика'], ['calc', 'Калькулятор'], ['set', 'Налаштування']];
+  let body = '';
+  if (UI.moreTab === 'stats') body = statsHTML();
+  else if (UI.moreTab === 'calc') body = calcHTML();
+  else body = settingsHTML();
+  $('#v-more').innerHTML = `
+    <h1>${tabs.find((x) => x[0] === UI.moreTab)[1]}</h1><div class="sub">&nbsp;</div>
+    <div class="seg">${tabs.map(([k, l]) => `<button data-mtab="${k}" class="${UI.moreTab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+    ${body}`;
+  bindMore();
+}
+
+function statsHTML() {
+  const t = today();
+  const ys = years();
+  if (!UI.statYear || !ys.includes(UI.statYear)) UI.statYear = ys[0];
+  const y = UI.statYear;
+  const mon = C.monthly(S.incomes, y);
+  const max = Math.max(...mon, 1);
+  const total = mon.reduce((a, b) => a + b, 0);
+  const monthsElapsed = y < t.getFullYear() ? 12 : y > t.getFullYear() ? 0 : t.getMonth() + 1;
+  const avg = monthsElapsed ? total / monthsElapsed : 0;
+  const bestI = mon.indexOf(Math.max(...mon));
+  const yt = C.yearTax(S.cfg, S.incomes, y);
+  const cl = C.byClient(S.incomes, y).slice(0, 6);
+  const clMax = cl.length ? cl[0].sum : 1;
+  const forecast = y === t.getFullYear() ? avg * 12 : total;
+  const lim = C.limit(S.cfg.group, y);
+  return `
+    <div class="chips">${ys.map((yy) => `<button data-staty="${yy}" class="${yy === y ? 'on' : ''}">${yy}</button>`).join('')}</div>
+    <div class="card">
+      <div class="row between"><b>Доходи по місяцях</b><span class="num hint small">${C.money(total)}</span></div>
+      <div class="chart" style="height:150px">${mon.map((v, i) => `<div class="c ${v ? '' : 'zero'} ${y === t.getFullYear() && i === t.getMonth() ? 'cur' : ''}">
+        <em>${v ? C.moneyShort(v) : ''}</em><i style="height:${Math.max(3, (v / max) * 82)}%"></i><span>${M_SHORT[i]}</span></div>`).join('')}</div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="stat-label">Середнє / міс</div><div class="stat-val num">${C.money(avg)}</div></div>
+      <div class="card"><div class="stat-label">Найкращий місяць</div><div class="stat-val">${total ? M_NOM[bestI] : '—'}</div></div>
+      <div class="card"><div class="stat-label">Податкове навантаження</div><div class="stat-val num">${yt.total.income ? (yt.total.total / yt.total.income * 100).toFixed(1).replace('.', ',') + '%' : '—'}</div></div>
+      <div class="card"><div class="stat-label">Прогноз на рік</div><div class="stat-val num">${C.moneyShort(forecast)} ₴</div>
+        <div class="small ${forecast > lim ? '' : 'hint'}" style="${forecast > lim ? 'color:var(--bad)' : ''}">${forecast > lim ? '⚠️ більше за ліміт' : 'в межах ліміту'}</div></div>
+    </div>
+    <h2>Клієнти</h2>
+    ${cl.length ? `<div class="card">${cl.map((c) => `<div style="margin-bottom:12px">
+      <div class="row between"><span class="title">${esc(c.name)}</span><span class="num small">${C.money(c.sum)} · ${Math.round(c.sum / total * 100)}%</span></div>
+      <div class="hbar"><i style="width:${c.sum / clMax * 100}%"></i></div></div>`).join('')}
+      <div class="note" style="padding:0">Вказуй клієнта, коли додаєш дохід, — і тут буде видно, хто приносить найбільше.</div></div>`
+      : `<div class="card empty"><div class="e">📊</div>Ще немає даних</div>`}`;
+}
+
+function calcHTML() {
+  const y = today().getFullYear();
+  const m = C.parseAmount(UI.calcMonthly) || 0;
+  const annual = m * 12;
+  const opts = [1, 2, 3].map((g) => C.annualForIncome(g, annual, y, g === 3 && S.cfg.vat));
+  // 1 група — лише для дуже вузького кола діяльності, тому не радимо її, якщо людина не на ній
+  const valid = opts.filter((o) => !o.overLimit && (o.group !== 1 || S.cfg.group === 1));
+  const RESTR = { 1: 'лише ринки й побутові послуги', 2: 'є обмеження за видами діяльності' };
+  const best = valid.length ? valid.reduce((a, b) => (a.total <= b.total ? a : b)) : null;
+  const sum = C.parseAmount(UI.calcSum);
+  const rate = S.cfg.group === 3 ? (S.cfg.vat ? C.EP_G3_VAT : C.EP_G3) + C.VZ_G3 : 0;
+  return `
+    <h2 style="margin-top:4px">Скільки відкласти з надходження</h2>
+    <div class="field big"><label>Сума надходження</label><input id="calc-sum" inputmode="decimal" placeholder="0" value="${esc(UI.calcSum)}"></div>
+    <div class="card">${S.cfg.group === 3
+      ? `<div class="kv"><span class="hint">Відкласти на ЄП і ВЗ (${Math.round(rate * 100)}%)</span><b class="num">${C.money(sum > 0 ? sum * rate : 0)}</b></div>
+         <div class="kv"><span class="hint">Залишиться</span><b class="num">${C.money(sum > 0 ? sum * (1 - rate) : 0)}</b></div>
+         <div class="note" style="padding:6px 0 0">ЄСВ — фіксований ${C.money(C.esvMonth(y))}/міс незалежно від доходу.</div>`
+      : `<div class="note" style="padding:0">У ${S.cfg.group} групі податки фіксовані й не залежать від суми надходження: ЄП ${C.money(S.cfg.epMonth ?? C.epMax(S.cfg.group, y))} + ВЗ ${C.money(C.vzFixedMonth(y))} + ЄСВ ${C.money(C.esvMonth(y))} щомісяця.</div>`}</div>
+
+    <h2>Яка група вигідніша</h2>
+    <div class="field"><label>Очікуваний дохід на місяць</label><input id="calc-m" inputmode="decimal" value="${esc(UI.calcMonthly)}"></div>
+    ${opts.map((o) => `<div class="card ${best && best.group === o.group ? 'best' : ''}" style="${o.overLimit ? 'opacity:.5' : ''}">
+      <div class="row between"><b>${o.group} група</b>${o.overLimit ? '<span class="pill bad">перевищено ліміт</span>'
+        : best && best.group === o.group ? '<span class="pill ok">найвигідніше</span>' : ''}</div>
+      ${RESTR[o.group] ? `<div class="small hint" style="margin:2px 0 4px">⚠️ ${RESTR[o.group]}</div>` : ''}
+      <div class="kv"><span class="hint">Податки на місяць</span><span class="num">${C.money(o.total / 12)}</span></div>
+      <div class="kv"><span class="hint">На руки на місяць</span><b class="num">${C.money(o.net / 12)}</b></div>
+      <div class="kv"><span class="hint">Навантаження</span><span class="num">${(o.rate * 100).toFixed(1).replace('.', ',')}%</span></div>
+    </div>`).join('')}
+    <p class="note">Для 1 і 2 груп розраховано за максимальними ставками ЄП. Ці групи мають обмеження: 1 група — лише роздрібна торгівля на ринках і побутові послуги населенню, 2 група — послуги й товари для населення та платників ЄП, без низки видів діяльності (зокрема частини IT-послуг). Перед зміною групи порадься з бухгалтером.</p>`;
+}
+
+function settingsHTML() {
+  const g = S.cfg.group, y = today().getFullYear();
+  return `
+    <h2 style="margin-top:4px">Група єдиного податку</h2>
+    <div class="gpick" id="set-groups">${[1, 2, 3].map((x) => `<button data-setg="${x}" class="${g === x ? 'on' : ''}"><b>${x}</b><span class="small hint">група</span></button>`).join('')}</div>
+    ${g === 3 ? `<div class="card row between"><div><b>Платник ПДВ</b><div class="small hint">ставка ЄП 3% замість 5%</div></div>
+      <button class="toggle ${S.cfg.vat ? 'on' : ''}" data-set-vat></button></div>`
+      : `<div class="field"><label>Ставка ЄП на місяць (макс. ${C.money(C.epMax(g, y))})</label>
+        <input id="set-ep" inputmode="decimal" value="${S.cfg.epMonth ?? C.epMax(g, y)}"></div>
+        <div class="note" style="margin-bottom:10px">Точну ставку встановлює місцева рада за місцем реєстрації.</div>`}
+    ${S.bot ? `<div class="note" style="margin-bottom:6px">Нагадування в чаті беруть групу з налаштувань бота. Якщо змінив групу тут — зміни її і в боті.</div>
+      <button class="btn sec" data-open-bot>Відкрити налаштування бота</button>` : ''}
+
+    <h2>Дані</h2>
+    <div class="list">
+      <div class="item"><div class="ico">🗂️</div><div class="grow"><div class="title">${S.incomes.length} ${plural(S.incomes.length, 'запис', 'записи', 'записів')}</div>
+        <div class="small hint">${Store.cs ? 'Зберігаються в хмарі Telegram — доступні з усіх пристроїв' : 'Зберігаються на цьому пристрої'}</div></div></div>
+      <button class="item" data-export><div class="ico">📤</div><div class="grow"><div class="title">Експорт у CSV</div><div class="small hint">Скопіювати таблицю для Excel / Google Sheets</div></div></button>
+      <button class="item" data-wipe><div class="ico" style="background:rgba(239,75,91,.12);color:var(--bad)">🗑️</div><div class="grow"><div class="title" style="color:var(--bad)">Видалити всі дані</div></div></button>
+    </div>
+
+    <h2>Про застосунок</h2>
+    <div class="card small">
+      <div class="kv"><span class="hint">Мінімальна зарплата ${C.rates(y).year}</span><span class="num">${C.money(C.rates(y).minWage)}</span></div>
+      <div class="kv"><span class="hint">ЄСВ (мінімум)</span><span class="num">${C.money(C.esvMonth(y))}/міс</span></div>
+      <div class="kv"><span class="hint">Ліміт ${g} групи</span><span class="num">${C.money(C.limit(g, y))}</span></div>
+      <div class="note" style="padding:8px 0 0">ФОП-помічник допомагає з обліком і нагадуваннями, але не є податковою консультацією. Перевіряй суми й строки в Електронному кабінеті ДПС.</div>
+    </div>`;
+}
+
+function bindMore() {
+  const cm = $('#calc-m'), cs = $('#calc-sum'), ep = $('#set-ep');
+  const keep = (el, key) => { if (!el) return; el.oninput = () => { UI[key] = el.value; const p = el.selectionStart; const id = el.id;
+    renderMore(); const n = document.getElementById(id); n.focus(); try { n.setSelectionRange(p, p); } catch (e) {} }; };
+  keep(cm, 'calcMonthly'); keep(cs, 'calcSum');
+  if (ep) ep.onchange = () => { const v = C.parseAmount(ep.value), mx = C.epMax(S.cfg.group, today().getFullYear());
+    if (!(v > 0 && v <= mx)) { toast(`Від 0 до ${C.money(mx)}`); ep.value = S.cfg.epMonth ?? mx; return; }
+    S.cfg.epMonth = v; Store.save(); toast('Збережено'); haptic('success'); };
+}
+
+/* ------------------------------------------------------------ лист додавання/редагування */
+let sheetId = null;
+function openSheet(id) {
+  sheetId = id || null;
+  const it = id ? S.incomes.find((i) => i.id === id) : null;
+  const clients = [...new Set(S.incomes.map((i) => i.client).filter(Boolean))].slice(0, 30);
+  $('#sheet').innerHTML = `
+    <div class="grab"></div>
+    <div class="row between" style="margin-bottom:12px"><b style="font-size:19px">${it ? 'Редагувати' : 'Нове надходження'}</b>
+      <button class="hint" data-close style="font-size:15px">Скасувати</button></div>
+    <div class="field big"><label>Сума, ₴</label><input id="f-amount" inputmode="decimal" placeholder="0" value="${it ? String(it.amount).replace('.', ',') : ''}"></div>
+    <div class="reserve hint" id="f-reserve">&nbsp;</div>
+    <div class="field"><label>Дата</label><input id="f-day" type="date" value="${it ? it.day : C.iso(today())}" max="${C.iso(today())}"></div>
+    <div class="field"><label>Клієнт</label><input id="f-client" list="f-clients" placeholder="напр. ТОВ «Ромашка»" value="${esc(it ? it.client : '')}">
+      <datalist id="f-clients">${clients.map((c) => `<option value="${esc(c)}">`).join('')}</datalist></div>
+    <div class="field"><label>Коментар</label><input id="f-note" placeholder="напр. сайт, консультація" value="${esc(it ? it.note : '')}"></div>
+    <button class="btn" data-save>${it ? 'Зберегти' : 'Додати'}</button>
+    ${it ? '<button class="btn danger" data-del>Видалити</button>' : ''}`;
+  $('#overlay').classList.add('on'); $('#sheet').classList.add('on');
+  const a = $('#f-amount');
+  const upd = () => { const v = C.parseAmount(a.value);
+    $('#f-reserve').innerHTML = v > 0 && S.cfg.group === 3
+      ? `💰 Відклади на податки <b class="num">${C.money(v * ((S.cfg.vat ? C.EP_G3_VAT : C.EP_G3) + C.VZ_G3))}</b>` : '&nbsp;'; };
+  a.oninput = upd; upd();
+  setTimeout(() => { if (!it) a.focus(); }, 280);
+  try { tg.BackButton.show(); } catch (e) {}
+  haptic('light');
+}
+function closeSheet() {
+  $('#overlay').classList.remove('on'); $('#sheet').classList.remove('on'); sheetId = null;
+  try { tg.BackButton.hide(); } catch (e) {}
+  document.activeElement && document.activeElement.blur();
+}
+function saveSheet() {
+  const amount = C.parseAmount($('#f-amount').value);
+  const day = $('#f-day').value;
+  if (!(amount > 0)) { haptic('error'); toast('Вкажи суму'); $('#f-amount').focus(); return; }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) { haptic('error'); toast('Вкажи дату'); return; }
+  if (day > C.iso(today())) { haptic('error'); toast('Дата не може бути в майбутньому'); return; }
+  const y = +day.slice(0, 4);
+  const lim = C.limit(S.cfg.group, y);
+  const before = C.sumIncome(S.incomes.filter((i) => i.id !== sheetId), new Date(y, 0, 1), new Date(y, 11, 31));
+  const rec = { day, amount, client: $('#f-client').value.trim(), note: $('#f-note').value.trim() };
+  if (sheetId) Object.assign(S.incomes.find((i) => i.id === sheetId), rec);
+  else S.incomes.push(Object.assign({ id: uid(), src: 'app' }, rec));
+  Store.save(); closeSheet(); renderAll(); haptic('success');
+  const after = before + amount;
+  if (before < lim && after >= lim) toast('🚨 Ліміт доходу перевищено!');
+  else if (before < lim * 0.9 && after >= lim * 0.9) toast('⚠️ Понад 90% річного ліміту');
+  else if (before < lim * 0.8 && after >= lim * 0.8) toast('⚠️ Понад 80% річного ліміту');
+  else toast(sheetId ? 'Збережено' : 'Додано ✓');
+}
+async function deleteSheet() {
+  if (!(await confirmBox('Видалити цей запис?'))) return;
+  const id = sheetId;
+  S.incomes = S.incomes.filter((i) => i.id !== id);
+  if (id.startsWith('b')) S.tomb.push(id); // щоб запис із чату не повернувся при наступному відкритті
+  Store.save(); closeSheet(); renderAll(); toast('Видалено'); haptic('warning');
+}
+
+/* ------------------------------------------------------------ навігація й події */
+function go(tab) {
+  UI.tab = tab;
+  $$('.view').forEach((v) => v.classList.toggle('active', v.id === 'v-' + tab));
+  $$('nav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
+  $('#fab').classList.toggle('hide', !(tab === 'home' || tab === 'inc'));
+  render(tab); window.scrollTo(0, 0);
+}
+function render(tab) {
+  ({ home: renderHome, inc: renderIncomes, tax: renderTaxes, dates: renderDates, more: renderMore })[tab]();
+}
+function renderAll() { render(UI.tab); }
+
+function exportCSV() {
+  const rows = [['Дата', 'Сума', 'Клієнт', 'Коментар']].concat(
+    [...S.incomes].sort((a, b) => a.day.localeCompare(b.day)).map((i) => [i.day, String(i.amount).replace('.', ','), i.client, i.note]));
+  const csv = rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+  const done = () => { toast('CSV скопійовано — встав у таблицю'); haptic('success'); };
+  const fallback = () => { const ta = document.createElement('textarea'); ta.value = csv; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch (e) { toast('Не вдалося скопіювати'); } ta.remove(); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(csv).then(done, fallback); else fallback();
+}
+
+document.addEventListener('click', async (e) => {
+  const el = e.target.closest('button, [data-edit]');
+  if (!el) return;
+  const d = el.dataset;
+  if (d.tab) { haptic('select'); return go(d.tab); }
+  if (d.go) return go(d.go);
+  if (d.edit) return openSheet(d.edit);
+  if (d.close !== undefined) return closeSheet();
+  if (d.save !== undefined) return saveSheet();
+  if (d.del !== undefined) return deleteSheet();
+  if (d.toggleDone) { S.done[d.toggleDone] = !S.done[d.toggleDone]; if (!S.done[d.toggleDone]) delete S.done[d.toggleDone];
+    Store.save(); haptic(S.done[d.toggleDone] ? 'success' : 'light'); return renderAll(); }
+  if (d.act === 'pay-done') { d.keys.split('|').forEach((k) => (S.done[k] = true)); Store.save(); haptic('success'); toast('Відмічено як сплачене ✓'); return renderAll(); }
+  if (d.incyear) { UI.incYear = +d.incyear; haptic('select'); return renderIncomes(); }
+  if (d.taxy) { UI.taxYear += +d.taxy; haptic('select'); return renderTaxes(); }
+  if (d.dtab) { UI.datesTab = d.dtab; haptic('select'); return renderDates(); }
+  if (d.mtab) { UI.moreTab = d.mtab; haptic('select'); return renderMore(); }
+  if (d.staty) { UI.statYear = +d.staty; haptic('select'); return renderMore(); }
+  if (d.setg) { const g = +d.setg; if (g !== S.cfg.group) { S.cfg.group = g; S.cfg.epMonth = g === 3 ? null : C.epMax(g, today().getFullYear());
+    Store.save(); haptic('success'); toast(`Тепер ${g} група`); } return renderMore(); }
+  if (d.setVat !== undefined) { S.cfg.vat = !S.cfg.vat; Store.save(); haptic('select'); return renderMore(); }
+  if (d.export !== undefined) return exportCSV();
+  if (d.openBot !== undefined) { try { tg.openTelegramLink(`https://t.me/${S.bot}?start=settings`); tg.close(); } catch (er) {} return; }
+  if (d.wipe !== undefined) { if (!(await confirmBox('Видалити всі записи й відмітки? Цю дію не можна скасувати.'))) return;
+    S.tomb = S.tomb.concat(S.incomes.filter((i) => i.id.startsWith('b')).map((i) => i.id));
+    S.incomes = []; S.done = {}; Store.save(); renderAll(); toast('Дані видалено'); return; }
+});
+$('#overlay').onclick = closeSheet;
+$('#fab').onclick = () => openSheet();
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && $('#sheet').classList.contains('on')) saveSheet(); });
+
+/* ------------------------------------------------------------ онбординг */
+function showOnboarding() {
+  $('#main').style.display = 'none'; $('#nav').style.display = 'none'; $('#fab').classList.add('hide');
+  $('#onboard').classList.add('on');
+  let g = null, vat = false;
+  const draw = () => {
+    $$('#ob-groups button').forEach((b) => b.classList.toggle('on', +b.dataset.g === g));
+    $('#ob-extra').innerHTML = g === 3 ? `<div class="card row between"><div><b>Платник ПДВ</b><div class="small hint">якщо так — ставка 3%</div></div>
+      <button class="toggle ${vat ? 'on' : ''}" id="ob-vat"></button></div>`
+      : g ? `<div class="field"><label>Ставка ЄП на місяць (макс. ${C.money(C.epMax(g, today().getFullYear()))})</label>
+        <input id="ob-ep" inputmode="decimal" value="${C.epMax(g, today().getFullYear())}"></div>` : '';
+    const v = $('#ob-vat'); if (v) v.onclick = () => { vat = !vat; haptic('select'); draw(); };
+    const go = $('#ob-go'); go.disabled = !g; go.style.opacity = g ? 1 : .5;
+  };
+  $$('#ob-groups button').forEach((b) => (b.onclick = () => { g = +b.dataset.g; haptic('select'); draw(); }));
+  $('#ob-go').onclick = () => {
+    if (!g) return;
+    let ep = null;
+    if (g !== 3) { const mx = C.epMax(g, today().getFullYear()); ep = C.parseAmount($('#ob-ep').value);
+      if (!(ep > 0 && ep <= mx)) { toast(`Ставка від 0 до ${C.money(mx)}`); return; } }
+    S.cfg = { group: g, vat: g === 3 && vat, epMonth: ep };
+    Store.save(); haptic('success');
+    $('#onboard').classList.remove('on'); $('#main').style.display = ''; $('#nav').style.display = '';
+    go('home');
+  };
+  draw();
+}
+
+/* ------------------------------------------------------------ старт */
+(async function init() {
+  if (tg) {
+    try { tg.ready(); tg.expand(); } catch (e) {}
+    if (IN_TG) document.documentElement.setAttribute('data-tg', '1');
+    const scheme = () => document.documentElement.setAttribute('data-scheme', (tg.colorScheme || 'light'));
+    scheme(); try { tg.onEvent('themeChanged', scheme); } catch (e) {}
+    try { tg.setHeaderColor('secondary_bg_color'); tg.setBackgroundColor('secondary_bg_color'); } catch (e) {}
+    try { tg.BackButton.onClick(closeSheet); } catch (e) {}
+    try { if (tg.isVersionAtLeast('7.7')) tg.disableVerticalSwipes(); } catch (e) {}
+  }
+  if (!IN_TG && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches)
+    document.documentElement.setAttribute('data-scheme', 'dark');
+  const saved = await Store.load();
+  if (saved && saved.cfg) S = Object.assign(S, saved);
+  if (importFromHash()) Store.save();
+  if (!S.cfg.group) return showOnboarding();
+  go('home');
+})();
+</script>
+</body>
+</html>
